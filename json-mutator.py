@@ -4,6 +4,7 @@ import socket
 from select import select
 import sys
 import logging
+import json
 
 class TcpTee:
 
@@ -57,8 +58,35 @@ class TcpTee:
         del self.channel[othersock]
 
     def on_recv(self, sock, data):
-        print data
-        self.channel[sock].send(data)
+        print("================= ORIGINAL ===============")
+        adata = str(data).split("\r\n\r\n")
+        
+        header = adata[0]
+        print("HEADER: ",header)
+        if len(adata) == 2:
+            payload = adata[1]
+            print("PAYLOAD: ",payload)
+ 
+        newPayload = "{\"id\": 1}"
+
+        print("================= MUTANT ===============")
+        print(data.replace("json-server","json-client"))
+        print("================================")
+        # jdata = json.loads(data)
+        # print(jdata)
+        # data.replace("json-server","json-server-modify")
+        if len(adata) == 2:
+            print("OLD DATA: ", data)
+            newData = header+"\r\n\r\n"+payload.replace("json","jsxn")
+            print("NEW DATA: ", newData)
+            self.channel[sock].send(newData)
+        else:
+            self.channel[sock].send(data)
+
+    def dump(obj):
+        for attr in dir(obj):
+            if hasattr( obj, attr ):
+                print( "obj.%s = %s" % (attr, getattr(obj, attr)))
 
 if __name__ == '__main__':
     import argparse
