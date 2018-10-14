@@ -5,6 +5,7 @@ from select import select
 import sys
 import logging
 import json
+import random
 
 class TcpTee:
 
@@ -66,27 +67,43 @@ class TcpTee:
         if len(adata) == 2:
             payload = adata[1]
             print("PAYLOAD: ",payload)
- 
-        newPayload = "{\"id\": 1}"
 
-        print("================= MUTANT ===============")
-        print(data.replace("json-server","json-client"))
-        print("================================")
-        # jdata = json.loads(data)
-        # print(jdata)
-        # data.replace("json-server","json-server-modify")
-        if len(adata) == 2:
+        if len(adata) == 2 and payload != "":
+            print("================= MUTANT ===============")
+            print("OLD DATA LENGTH: ", str(len(payload)))
             print("OLD DATA: ", data)
-            newData = header+"\r\n\r\n"+payload.replace("json","jsxn")
+            
+            json_obj = json.loads(payload)
+
+            lucky_number = random.randint(0, len(json_obj)-1)
+            print("LUCKY NUMBER", lucky_number)
+            the_number = 0
+            chosen_key = ""
+
+            for key in json_obj:
+                # print(key, " = ",json_obj[key])
+                
+                if the_number == lucky_number:
+                    chosen_key = key
+
+                the_number += 1
+
+            json_obj.pop(chosen_key)
+        
+            newPayload = json.dumps(json_obj).replace("json","jsonXX")
+            print("NEW PAYLOAD: ", newPayload)
+
+            print("NEW DATA LENGTH: ", str(len(newPayload)))
+            newData = header.replace("Content-Length: "+str(len(payload)),"Content-Length: "+str(len(newPayload)))+"\r\n\r\n"+newPayload
             print("NEW DATA: ", newData)
-            self.channel[sock].send(newData)
+        
+            try:
+                self.channel[sock].send(newData)
+            except:
+                print "Unexpected error:", sys.exc_info()[0]
+                raise
         else:
             self.channel[sock].send(data)
-
-    def dump(obj):
-        for attr in dir(obj):
-            if hasattr( obj, attr ):
-                print( "obj.%s = %s" % (attr, getattr(obj, attr)))
 
 if __name__ == '__main__':
     import argparse
