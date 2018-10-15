@@ -60,52 +60,46 @@ class TcpTee:
         del self.channel[othersock]
 
     def on_recv(self, sock, data):
-        
-        print("================= ORIGINAL ===============")
-        adata = str(data).split("\r\n\r\n")
-        
-        header = adata[0]
-        print("HEADER: ",header)
-        if len(adata) == 2:
-            payload = adata[1]
-            print("PAYLOAD: ",payload)
 
-        if payload != "":
-            print("================= MUTANT ===============")
-            print("OLD DATA LENGTH: ", str(len(payload)))
-            print("OLD DATA: ", data)
-            
-            json_obj = json.loads(payload)
-
-            lucky_number = random.randint(0, len(json_obj)-1)
-            print("LUCKY NUMBER", lucky_number)
-            the_number = 0
-            chosen_key = ""
-
-            for key in json_obj:
-                # print(key, " = ",json_obj[key])
-                
-                if the_number == lucky_number:
-                    chosen_key = key
-
-                the_number += 1
-
-            json_obj.pop(chosen_key)
-        
-            new_payload = json.dumps(json_obj).replace("json","jsonXX")
-            print("NEW PAYLOAD: ", new_payload)
-
-            print("NEW DATA LENGTH: ", str(len(new_payload)))
-            new_data = header.replace("Content-Length: "+str(len(payload)),"Content-Length: "+str(len(new_payload)))+"\r\n\r\n"+new_payload
-            print("NEW DATA: ", new_data)
-        
-            try:
-                self.channel[sock].send(new_data)
-            except:
-                print "Unexpected error:", sys.exc_info()[0]
-                raise
-        else:
+        if re.search(r'localhost:3333', data): # UPSTREAM TRAFFIC
             self.channel[sock].send(data)
+        else: # DOWNSTREAM TRAFFIC
+            print("================= ORIGINAL ===============")
+            adata = str(data).split("\r\n\r\n") # Two lines between header and payload, only way I can separate it.
+            
+            header = adata[0]
+            print("HEADER: ",header)
+            if len(adata) == 2:
+                payload = adata[1]
+                print("Origianal Payload: ",payload)
+
+            if payload != "":
+                print("================= MUTANT ===============")                
+                json_obj = json.loads(payload)
+
+                # Remove a node from payload
+                lucky_number = random.randint(0, len(json_obj)-1)
+                the_number = 0
+                for key in json_obj:
+                    if the_number == lucky_number:
+                        json_obj.pop(key)
+                        break
+                    else:
+                        the_number += 1
+
+                # Modify a value
+                new_payload = json.dumps(json_obj).replace("json","jsonXX")
+                
+                print("Mutant Payload: ", new_payload)
+
+                # Content length in header need to be fixed
+                new_data = header.replace("Content-Length: "+str(len(payload)),"Content-Length: "+str(len(new_payload)))+"\r\n\r\n"+new_payload
+                
+                try:
+                    self.channel[sock].send(new_data)
+                except:
+                    print "Unexpected error:", sys.exc_info()[0]
+                    raise
 
 if __name__ == '__main__':
     import argparse
