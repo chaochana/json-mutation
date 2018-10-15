@@ -6,6 +6,7 @@ import sys
 import logging
 import json
 import random
+import re
 
 class TcpTee:
 
@@ -59,6 +60,7 @@ class TcpTee:
         del self.channel[othersock]
 
     def on_recv(self, sock, data):
+        
         print("================= ORIGINAL ===============")
         adata = str(data).split("\r\n\r\n")
         
@@ -68,7 +70,7 @@ class TcpTee:
             payload = adata[1]
             print("PAYLOAD: ",payload)
 
-        if len(adata) == 2 and payload != "":
+        if payload != "":
             print("================= MUTANT ===============")
             print("OLD DATA LENGTH: ", str(len(payload)))
             print("OLD DATA: ", data)
@@ -90,15 +92,15 @@ class TcpTee:
 
             json_obj.pop(chosen_key)
         
-            newPayload = json.dumps(json_obj).replace("json","jsonXX")
-            print("NEW PAYLOAD: ", newPayload)
+            new_payload = json.dumps(json_obj).replace("json","jsonXX")
+            print("NEW PAYLOAD: ", new_payload)
 
-            print("NEW DATA LENGTH: ", str(len(newPayload)))
-            newData = header.replace("Content-Length: "+str(len(payload)),"Content-Length: "+str(len(newPayload)))+"\r\n\r\n"+newPayload
-            print("NEW DATA: ", newData)
+            print("NEW DATA LENGTH: ", str(len(new_payload)))
+            new_data = header.replace("Content-Length: "+str(len(payload)),"Content-Length: "+str(len(new_payload)))+"\r\n\r\n"+new_payload
+            print("NEW DATA: ", new_data)
         
             try:
-                self.channel[sock].send(newData)
+                self.channel[sock].send(new_data)
             except:
                 print "Unexpected error:", sys.exc_info()[0]
                 raise
