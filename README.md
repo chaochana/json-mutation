@@ -1,4 +1,4 @@
-*JSON MUTATOR PROXY*
+**JSON MUTATOR PROXY**
 
 JSON MUTATOR PROXY is a test tool to mutate JSON response for Mutation Testing : https://en.wikipedia.org/wiki/Mutation_testing
 
