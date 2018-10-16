@@ -29,7 +29,25 @@ class TcpTee:
                     self.on_accept()
                     break
 
-                data = s.recv(4096)
+                # data = s.recv(909600000)
+                
+                BUFF_SIZE = 512 # 2 KiB
+                data = b''
+                while True:
+                    part = s.recv(BUFF_SIZE)
+                    data += part
+                    print("PART LENGTH ===> ", len(part))
+                    if len(part) < BUFF_SIZE:
+                        # either 0 or end of data
+                        break
+
+                # data = b''
+                # while len(data) < n:
+                #     packet = sock.recv(n - len(data))
+                #     if not packet:
+                #         return None
+                #     data += packet        
+
                 if not data:
                     self.on_close(s)
                     break
@@ -66,12 +84,12 @@ class TcpTee:
         else: # DOWNSTREAM TRAFFIC
             print("================= ORIGINAL ===============")
             adata = str(data).split("\r\n\r\n") # Two lines between header and payload, only way I can separate it.
-            
+
             header = adata[0]
             print("HEADER: ",header)
             if len(adata) == 2:
                 payload = adata[1]
-                print("Origianal Payload: ",payload)
+                # print("Origianal Payload: ",payload)
 
             if payload != "":
                 print("================= MUTANT ===============")                
@@ -90,7 +108,7 @@ class TcpTee:
                 # Modify a value
                 new_payload = json.dumps(json_obj).replace("json","jsonXX")
                 
-                print("Mutant Payload: ", new_payload)
+                # print("Mutant Payload: ", new_payload)
 
                 # Content length in header need to be fixed
                 new_data = header.replace("Content-Length: "+str(len(payload)),"Content-Length: "+str(len(new_payload)))+"\r\n\r\n"+new_payload
